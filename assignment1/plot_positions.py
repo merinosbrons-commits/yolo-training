@@ -18,7 +18,7 @@ def plot_positions(positions: NDArray[np.float64]) -> None:
     ax.set_xlabel('X Position')
     ax.set_ylabel('Y Position')
     ax.set_zlabel('Z Position')
-    ax.set_title('3D Traject Visualisatie')
+    ax.set_title('3D Route Visualisation of the drone')
     ax.legend()
 
     plt.show()
