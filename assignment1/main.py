@@ -3,7 +3,7 @@ import numpy as np
 from plot_positions import plot_positions
 
 
-def main():
+def main() -> None:
     positions = np.array([
         [2.0, 0.0, 1.0],
         [1.08, 1.68, 2.38],
