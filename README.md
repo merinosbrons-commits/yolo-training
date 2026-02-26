@@ -14,8 +14,21 @@ This project requires **Python 3.12** or higher. It uses the following libraries
 - `torch`: For advanced mathematical modeling.
 - `scikit-learn`: For comparative analysis (if applicable).
 
+
 ## Installation
-You can install the necessary dependencies using `pip`:
+We recommend to use uv for setting up the environment using `uv`:
+
+```bash
+uv sync
+```
+
+If you prefer to use `pip` use:
 
 ```bash
 pip install numpy scikit-learn torch
+```
+
+## Authors
+- Merijn Brons
+- Stijn Brouwers
+- Maarten Hulsman
