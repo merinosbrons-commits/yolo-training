@@ -40,19 +40,16 @@ class urban_object:
         self.points = read_xyz(filenm)
 
         # initialize the feature vector
-        self.feature = []
+        self.feature = {}
 
     def compute_features(self):
         """
         Compute the features, here we provide two example features. You're encouraged to design your own features
         """
-        self.width()
-
-        self.depth()
-        
-        # calculate the height
-        height = np.amax(self.points[:, 2])
-        self.feature.append(height)
+        xyz_max = np.amax(self.points, axis=0)
+        self.feature["width"] = xyz_max[0]
+        self.feature["depth"] = xyz_max[1]
+        self.feature["height"] = xyz_max[2]
 
         # get the root point and top point
         root = self.points[[np.argmin(self.points[:, 2])]]
@@ -66,17 +63,17 @@ class urban_object:
         radius_root = 0.2
         count = kd_tree_2d.query_radius(root[:, :2], r=radius_root, count_only=True)
         root_density = 1.0*count[0] / len(self.points)
-        self.feature.append(root_density)
+        self.feature["root_density"] = root_density
 
         # compute the 2D footprint and calculate its area
         hull_2d = ConvexHull(self.points[:, :2])
         hull_area = hull_2d.volume
-        self.feature.append(hull_area)
+        self.feature["hull_area"] = hull_area
 
         # get the hull shape index
         hull_perimeter = hull_2d.area
         shape_index = 1.0 * hull_area / hull_perimeter
-        self.feature.append(shape_index)
+        self.feature["shape_index"] = shape_index
 
         # obtain the point cluster near the top area
         k_top = max(int(len(self.points) * 0.005), 100)
@@ -86,26 +83,68 @@ class urban_object:
 
         # obtain the covariance matrix of the top points
         cov = np.cov(neighbours.T)
-        w, _ = np.linalg.eig(cov)
-        w.sort()
 
-        # calculate the linearity and sphericity
-        linearity = (w[2]-w[1]) / (w[2] + 1e-5)
-        sphericity = w[0] / (w[2] + 1e-5)
-        self.feature += [linearity, sphericity]
+        # Get eigenvalues and sort descending: L1 >= L2 >= L3 as decriped in the paper
+        evals = np.sort(np.linalg.eigvalsh(cov))[::-1] 
+        l1, l2, l3 = evals
+        
+        # Add a small epsilon to prevent division by zero
+        eps = 1e-5
 
+        # Apply formulas from Table 1 of the paper 
+        self.feature.update({
+            "sum_eigen":    np.sum(evals),
+            "omnivariance": np.prod(np.maximum(evals, eps))**(1/3),
+            "eigenentropy": -np.sum(evals * np.log(evals + eps)),
+            "linearity":    (l1 - l2) / (l1 + eps),
+            "planarity":    (l2 - l3) / (l1 + eps),
+            "sphericity":   l3 / (l1 + eps),
+            "curvature":    l3 / (np.sum(evals) + eps),
+            "n_points":    int(self.points.shape[0]) 
+        })
+        
     # Own features
     def width(self):
         width = np.amax(self.points[:, 0])
-        self.feature.append(width)
+        self.feature["width"] = width
 
         return width
     
     def depth(self):
-        depth = np.amax(self.points[:, 0])
-        self.feature.append(depth)
+        depth = np.amax(self.points[:, 1])
+        self.feature["depth"] = depth
 
         return depth
+    
+    def eigenvalues_sum(self):
+        eigenvalues_sum = sum(self.w)
+        self.feature["eigenvalues_sum"] = eigenvalues_sum
+
+        return eigenvalues_sum
+    
+    def omnivariance(self):
+        omnivariance = np.prod(self.w)**(1/3)
+        self.feature["omnivariance"] = omnivariance
+
+        return omnivariance
+    
+    def eigenentropy(self):
+        eigenentropy = -np.sum(self.w * np.log(self.w + 1e-5))
+        self.feature["eigenentropy"] = eigenentropy
+
+        return eigenentropy
+
+    def planarity(self):
+        planarity = (self.w[1] - self.w[2]) / self.w[0]
+        self.feature["planarity"] = planarity
+
+        return planarity
+    
+
+    
+
+    
+
 
 
 def read_xyz(filenm):
@@ -151,14 +190,15 @@ def feature_preparation(data_path):
         i_object.compute_features()
 
         # add the data to the list
-        i_data = [i_object.cloud_ID, i_object.label] + i_object.feature
+        i_data = [i_object.cloud_ID, i_object.label] + list(i_object.feature.values())
         input_data += [i_data]
 
     # transform the output data
     outputs = np.array(input_data).astype(np.float32)
 
     # write the output to a local file
-    data_header = 'ID,label,width,depth,height,root_density,area,shape_index,linearity,sphericity'
+    feature_names = ",".join(i_object.feature.keys())
+    data_header = 'ID,label,' + feature_names
     np.savetxt(data_file, outputs, fmt='%10.5f', delimiter=',', newline='\n', header=data_header)
 
 
