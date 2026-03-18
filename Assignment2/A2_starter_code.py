@@ -46,6 +46,10 @@ class urban_object:
         """
         Compute the features, here we provide two example features. You're encouraged to design your own features
         """
+        self.width()
+
+        self.depth()
+        
         # calculate the height
         height = np.amax(self.points[:, 2])
         self.feature.append(height)
@@ -90,6 +94,19 @@ class urban_object:
         sphericity = w[0] / (w[2] + 1e-5)
         self.feature += [linearity, sphericity]
 
+    # Own features
+    def width(self):
+        width = np.amax(self.points[:, 0])
+        self.feature.append(width)
+
+        return width
+    
+    def depth(self):
+        depth = np.amax(self.points[:, 0])
+        self.feature.append(depth)
+
+        return depth
+
 
 def read_xyz(filenm):
     """
@@ -113,8 +130,8 @@ def feature_preparation(data_path):
     """
     # check if the current data file exist
     data_file = 'data.txt'
-    if exists(data_file):
-        return
+    # if exists(data_file):
+    #     return
 
     # obtain the files in the folder
     files = sorted(listdir(data_path))
@@ -141,7 +158,7 @@ def feature_preparation(data_path):
     outputs = np.array(input_data).astype(np.float32)
 
     # write the output to a local file
-    data_header = 'ID,label,height,root_density,area,shape_index,linearity,sphericity'
+    data_header = 'ID,label,width,depth,height,root_density,area,shape_index,linearity,sphericity'
     np.savetxt(data_file, outputs, fmt='%10.5f', delimiter=',', newline='\n', header=data_header)
 
 
