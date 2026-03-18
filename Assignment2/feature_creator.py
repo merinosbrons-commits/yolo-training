@@ -59,8 +59,20 @@ def density(width, depth, height, n_points):
     return n_points / (volume + 1e-5)
 
 # Maarten
-def feature5():
-    ...
+def get_density_profile_per_segment(width, height, depth, n_segments=3):
+    """
+    Splits the object into slices for every dimension and calculates point 
+    distribution across those slices.
+    """    
+    # Calculate the boundaries for each segment
+    segment_width_edges = np.linspace(0, width, n_segments)
+    segment_height_edges = np.linspace(0, height, n_segments)
+    segment_depth_edges = np.linspace(0, depth, n_segments)
+    
+    # Find the n_points in every segment
+    for i in range(n_segments):
+        ...
+    
 
 def feature6():
     ...
