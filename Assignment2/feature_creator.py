@@ -72,16 +72,19 @@ def load_features(objects: list[np.ndarray]) -> None:
 
     for i, points in enumerate(objects):
         width, depth, height = get_width_depth_height(points)
-        # NOTE: Hier kan je dus je twee eigen features inladen
-        elongation_laden = get_plane_elongations(width, depth, height)
-        density_laden= density(width, depth, height, n_points)
-        row = [i, width, depth, height, elongation_laden, density_laden]
+        
+        # Calculate features
+        exy, eyz, exz = get_plane_elongations(width, depth, height)
+        dens = density(width, depth, height, n_points)
+
+        # Add row
+        row = [i, width, depth, height, exy, eyz, exz, dens]
         all_rows.append(row)
 
     output_matrix = np.array(all_rows).astype(np.float32)
 
     # NOTE: vergeet 'm niet aan de header toe te voegen
-    header = 'ID,label,width,depth,height,elongation,density'
+    header = 'ID,width,depth,height,elong_xy,elong_yz,elong_xz,density'    
     np.savetxt('own_data.txt', output_matrix, fmt='%10.5f', delimiter=',', header=header)
     
     print("Features succesvol opgeslagen in own_data.txt")
