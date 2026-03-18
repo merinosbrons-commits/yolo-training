@@ -39,9 +39,6 @@ def get_plane_elongations(width, depth, height):
     
     return elong_xy, elong_yz, elong_xz
 
-# @merinosbrons-commits: isn't this the same as height, width and depth? 
-# I think that they are correlate 100% 
-# Same counts for elongation
 def density(width, depth, height, n_points):
     """
     Calculates the point density relative to the 3D bounding box volume.
