@@ -89,21 +89,47 @@ class urban_object:
         l1, l2, l3 = evals
         
         # Add a small epsilon to prevent division by zero
-        eps = 1e-5
+        self.eps = 1e-5
 
         # Apply formulas from Table 1 of the paper 
         self.feature.update({
             "sum_eigen":    np.sum(evals),
-            "omnivariance": np.prod(np.maximum(evals, eps))**(1/3),
-            "eigenentropy": -np.sum(evals * np.log(evals + eps)),
-            "linearity":    (l1 - l2) / (l1 + eps),
-            "planarity":    (l2 - l3) / (l1 + eps),
-            "sphericity":   l3 / (l1 + eps),
-            "curvature":    l3 / (np.sum(evals) + eps),
+            "omnivariance": np.prod(np.maximum(evals, self.eps))**(1/3),
+            "eigenentropy": -np.sum(evals * np.log(evals + self.eps)),
+            "linearity":    (l1 - l2) / (l1 + self.eps),
+            "planarity":    (l2 - l3) / (l1 + self.eps),
+            "sphericity":   l3 / (l1 + self.eps),
+            "curvature":    l3 / (np.sum(evals) + self.eps),
             "n_points":    int(self.points.shape[0]) 
         })
+
+        # Our own (creative) functions
+        self.elongation()
+        self.bbox_density()
+        self.density_profile_per_segment()
         
+    # The functions we came up with ourselves (without papers, just creativity)
+    def elongation(self):
+        self.feature["elong_xy"] = max(self.feature["width"], self.feature["depth"]) / (min(self.feature["width"], self.feature["depth"]) + self.eps)
+        self.feature["elong_yz"] = max(self.feature["depth"], self.feature["height"]) / (min(self.feature["depth"], self.feature["height"]) + self.eps)
+        self.feature["elong_xz"] = max(self.feature["width"], self.feature["height"]) / (min(self.feature["width"], self.feature["height"]) + self.eps)
+
+    def bbox_density(self):
+        volume = self.feature["width"] * self.feature["height"] * self.feature["depth"]
+        self.feature["volume"] = self.feature["n_points"] / (volume + self.eps)
+
+    # NOTE: n_segments is a hyperparameter, for now it's 6 (no arguments)
+    def density_profile_per_segment(self, n_segments=6):
+        mins = np.min(self.points, axis=0)
+        normalized_points = self.points - mins
         
+        # Calculate histograms for each axis
+        for axis, name in enumerate(['prof_x', 'prof_y', 'prof_z']):
+            hist, _ = np.histogram(normalized_points[:, axis], bins=n_segments, density=True)
+            for j in range(n_segments):
+                self.feature[f"{name}_{j}"] = hist[j]
+
+
 def read_xyz(filenm):
     """
     Reading points
