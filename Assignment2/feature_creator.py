@@ -1,6 +1,8 @@
 import numpy as np
 
 
+# TODO: check if we're getting the right order here. Are they indeed width, depth, height?
+# This is a TODO since it is not 
 def get_width_depth_height(points):
     dims = np.ptp(points, axis=0)
     return dims[0], dims[1], dims[2]
@@ -14,24 +16,28 @@ def feature2():
     ...
 
 # Merijn
-def elongation(points):
+def get_plane_elongations(width, depth, height):
     """
-    Calculates the 2D bounding box elongation of a point cloud.
+    Calculates elongation ratios for the three primary orthogonal planes.
     
-    This feature measures the ratio between the longest and shortest sides 
-    of the object's footprint in the XY plane.
-               
-    Note:
-        Unlike raw dimensions, this is scale-invariant. A 1x2m object 
-        and a 10x20m object will both result in an elongation of 2.0.
+    This provides a 'shape profile' by looking at the object from the 
+    Top (XY), Side (YZ), and Front (XZ) perspectives.
+    
+    Returns:
+        tuple: (elong_xy, elong_yz, elong_xz)
     """
-    # bounding box elongation, de verhouding tussen de langste en kortste zijde van de bounding box
-    x_range = np.max(points[:,0]) - np.min(points[:,0])
-    y_range = np.max(points[:,1]) - np.min(points[:,1])
-
-    elongation = max(x_range, y_range) / (min(x_range, y_range) + 1e-5)
-
-    return elongation
+    eps = 1e-5
+    
+    # Top-down perspective (Footprint)
+    elong_xy = max(width, depth) / (min(width, depth) + eps)
+    
+    # Side perspective (Profile)
+    elong_yz = max(depth, height) / (min(depth, height) + eps)
+    
+    # Front perspective (Cross-section)
+    elong_xz = max(width, height) / (min(width, height) + eps)
+    
+    return elong_xy, elong_yz, elong_xz
 
 # @merinosbrons-commits: isn't this the same as height, width and depth? 
 # I think that they are correlate 100% 
@@ -67,8 +73,8 @@ def load_features(objects: list[np.ndarray]) -> None:
     for i, points in enumerate(objects):
         width, depth, height = get_width_depth_height(points)
         # NOTE: Hier kan je dus je twee eigen features inladen
-        elongation_laden = elongation(width, depth, height, n_points)
-        density_laden= density(points)
+        elongation_laden = get_plane_elongations(width, depth, height)
+        density_laden= density(width, depth, height, n_points)
         row = [i, width, depth, height, elongation_laden, density_laden]
         all_rows.append(row)
 
