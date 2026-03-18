@@ -103,50 +103,7 @@ class urban_object:
             "n_points":    int(self.points.shape[0]) 
         })
         
-    # Own features
-    def width(self):
-        width = np.amax(self.points[:, 0])
-        self.feature["width"] = width
-
-        return width
-    
-    def depth(self):
-        depth = np.amax(self.points[:, 1])
-        self.feature["depth"] = depth
-
-        return depth
-    
-    def eigenvalues_sum(self):
-        eigenvalues_sum = sum(self.w)
-        self.feature["eigenvalues_sum"] = eigenvalues_sum
-
-        return eigenvalues_sum
-    
-    def omnivariance(self):
-        omnivariance = np.prod(self.w)**(1/3)
-        self.feature["omnivariance"] = omnivariance
-
-        return omnivariance
-    
-    def eigenentropy(self):
-        eigenentropy = -np.sum(self.w * np.log(self.w + 1e-5))
-        self.feature["eigenentropy"] = eigenentropy
-
-        return eigenentropy
-
-    def planarity(self):
-        planarity = (self.w[1] - self.w[2]) / self.w[0]
-        self.feature["planarity"] = planarity
-
-        return planarity
-    
-
-    
-
-    
-
-
-
+        
 def read_xyz(filenm):
     """
     Reading points
