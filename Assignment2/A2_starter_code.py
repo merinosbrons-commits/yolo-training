@@ -201,6 +201,136 @@ def data_loading(data_file='data.txt'):
     return ID, X, y
 
 
+def load_feature_names(data_file='data.txt'):
+    """
+    Read feature names from the header of the saved data file
+        data_file: the local file that contains feature names in the header
+    """
+    with open(data_file, 'r') as f_input:
+        header = f_input.readline().strip()
+
+    if header.startswith('#'):
+        header = header[1:].strip()
+
+    columns = [col.strip() for col in header.split(',')]
+    return columns[2:]
+
+
+def compute_scatter_matrices(X, y):
+    """
+    Compute within-class scatter matrix S_W and between-class scatter matrix S_B
+        X: input features with shape (n_samples, n_features)
+        y: labels with shape (n_samples,)
+    """
+    classes = np.unique(y)
+    n_samples = X.shape[0]
+    n_features = X.shape[1]
+
+    mu = np.mean(X, axis=0)
+    S_W = np.zeros((n_features, n_features), dtype=np.float64)
+    S_B = np.zeros((n_features, n_features), dtype=np.float64)
+
+    for cls in classes:
+        X_k = X[y == cls]
+        n_k = X_k.shape[0]
+        mu_k = np.mean(X_k, axis=0)
+
+        if n_k > 1:
+            sigma_k = np.cov(X_k, rowvar=False, bias=False)
+        else:
+            sigma_k = np.zeros((n_features, n_features), dtype=np.float64)
+
+        mean_diff = (mu_k - mu).reshape(-1, 1)
+
+        S_W += (n_k / n_samples) * sigma_k
+        S_B += (n_k / n_samples) * (mean_diff @ mean_diff.T)
+
+    return S_W, S_B
+
+
+def fisher_score_subset(X_subset, y, regularization=1e-8):
+    """
+    Score a feature subset using trace(inv(S_W) * S_B)
+        X_subset: selected features with shape (n_samples, n_selected_features)
+        y: labels
+        regularization: small value for numerical stability
+    """
+    S_W, S_B = compute_scatter_matrices(X_subset, y)
+    S_W = S_W + regularization * np.eye(S_W.shape[0])
+    score = np.trace(np.linalg.pinv(S_W) @ S_B)
+    return float(score)
+
+
+def rank_features_by_fisher(X, y, feature_names):
+    """
+    Rank individual features using the Fisher criterion S_B / S_W in 1D
+        X: input features
+        y: labels
+        feature_names: names of the features
+    """
+    ranking = []
+
+    for idx, name in enumerate(feature_names):
+        Xi = X[:, [idx]]
+        score = fisher_score_subset(Xi, y)
+        ranking.append((name, idx, score))
+
+    ranking.sort(key=lambda item: item[2], reverse=True)
+    return ranking
+
+
+def select_features_greedy(X, y, feature_names, n_select=5):
+    """
+    Greedy forward feature selection using the Fisher subset score
+        X: input features
+        y: labels
+        feature_names: names of all features
+        n_select: number of features to select
+    """
+    n_select = min(n_select, X.shape[1])
+    selected_indices = []
+    remaining_indices = list(range(X.shape[1]))
+
+    for _ in range(n_select):
+        best_candidate = None
+        best_score = -np.inf
+
+        for idx in remaining_indices:
+            candidate_indices = selected_indices + [idx]
+            candidate_score = fisher_score_subset(X[:, candidate_indices], y)
+
+            if candidate_score > best_score:
+                best_score = candidate_score
+                best_candidate = idx
+
+        selected_indices.append(best_candidate)
+        remaining_indices.remove(best_candidate)
+
+    selected_names = [feature_names[idx] for idx in selected_indices]
+    return selected_indices, selected_names
+
+
+def feature_selection_report(X, y, feature_names, n_select=5):
+    """
+    Print a ranking of individual features and a greedy-selected subset
+    """
+    ranking = rank_features_by_fisher(X, y, feature_names)
+    selected_indices, selected_names = select_features_greedy(X, y, feature_names, n_select=n_select)
+
+    print("\nTop individual features based on Fisher score:")
+    for rank_i, (name, idx, score) in enumerate(ranking[:10], start=1):
+        print("%2d. %-20s idx=%2d score=%10.5f" % (rank_i, name, idx, score))
+
+    print("\nGreedy selected feature subset:")
+    for idx, name in zip(selected_indices, selected_names):
+        print("idx=%2d  name=%s" % (idx, name))
+
+    subset_score = fisher_score_subset(X[:, selected_indices], y)
+    print("Subset Fisher score: %10.5f" % subset_score)
+
+    return ranking, selected_indices, selected_names
+
+
 def feature_visualization(X):
     """
     Visualize the features
@@ -267,14 +397,20 @@ if __name__=='__main__':
     # load the data
     print('Start loading data from the local file')
     ID, X, y = data_loading()
+    feature_names = load_feature_names()
+
+    # select the most discriminative features using S_W and S_B
+    print('Select the best features')
+    ranking, selected_indices, selected_names = feature_selection_report(X, y, feature_names, n_select=5)
+    X_selected = X[:, selected_indices]
 
     # visualize features
     print('Visualize the features')
     feature_visualization(X=X)
 
     # SVM classification
-    print('Start SVM classification')
-    SVM_classification(X, y)
+    print('Start SVM classification with selected features')
+    SVM_classification(X_selected, y)
 
     # RF classification
     print('Start RF classification')
