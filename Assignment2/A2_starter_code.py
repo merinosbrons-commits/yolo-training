@@ -310,7 +310,7 @@ def select_features_greedy(X, y, feature_names, n_select=5):
     return selected_indices, selected_names
 
 
-def feature_selection_report(X, y, feature_names, n_select=5):
+def feature_selection_report(X, y, feature_names, n_select=4):
     """
     Print a ranking of individual features and a greedy-selected subset
     """
