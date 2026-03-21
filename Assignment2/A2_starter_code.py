@@ -7,6 +7,7 @@ Required libraries: numpy, scipy, scikit learn, matplotlib, tqdm
 """
 
 import math
+import os
 import seaborn as sns
 import matplotlib.pyplot as plt
 import numpy as np
@@ -358,7 +359,6 @@ def feature_visualization(X):
     ax.set_xlabel('x1:root density')
     ax.set_ylabel('x2:area')
     ax.legend()
-    plt.show()
 
 
 def SVM_classification(X, y):
@@ -412,8 +412,8 @@ def RF_classification(X, y):
 
 def plot_learning_curve(clf, X, y, title="Learning Curve"):
     """
-    Handmatige implementatie van de learning curve door de train-test split 
-    stapsgewijs te verhogen van 1:9 naar 9:1.
+    Handmatige implementatie van de learning curve.
+    Slaat het resultaat op in de map 'results'.
     """
     train_ratios = np.linspace(0.1, 0.9, 9)
     train_scores = []
@@ -422,14 +422,11 @@ def plot_learning_curve(clf, X, y, title="Learning Curve"):
     print(f"\nBezig met genereren van {title}...")
     
     for ratio in train_ratios:
-        # Handmatige split conform ratio 
         X_train, X_test, y_train, y_test = train_test_split(
             X, y, train_size=ratio, random_state=42
         )
-        
         clf.fit(X_train, y_train)
         
-        # Gebruik Accuracy als metriek 
         train_score = accuracy_score(y_train, clf.predict(X_train))
         test_score = accuracy_score(y_test, clf.predict(X_test))
         
@@ -444,18 +441,21 @@ def plot_learning_curve(clf, X, y, title="Learning Curve"):
     plt.ylabel("Accuracy Score")
     plt.legend(loc="best")
     plt.grid(True)
-    plt.show()
+    
+    filename = f"results/learning_curve_{title.replace(' ', '_').replace(':', '').replace('(', '').replace(')', '')}.png"    
+    plt.savefig(filename)
+    print(f"Figuur opgeslagen: {filename}")
+    plt.close()
 
 def evaluate_model_performance(clf, X, y, model_name="Classifier"):
     """
-    Analyseert de resultaten met een confusion matrix.
+    Analyseert resultaten en slaat confusion matrix op in 'results'.
     """
     _, X_test, _, y_test = train_test_split(X, y, test_size=0.4, random_state=42)
     y_pred = clf.predict(X_test)
     
-    # Bereken de matrix
     cm = confusion_matrix(y_test, y_pred)
-    labels = ['Building', 'Car', 'Fence', 'Pole', 'Tree'] # Conform ID's
+    labels = ['Building', 'Car', 'Fence', 'Pole', 'Tree'] 
     
     plt.figure(figsize=(7, 5))
     sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', 
@@ -463,7 +463,12 @@ def evaluate_model_performance(clf, X, y, model_name="Classifier"):
     plt.title(f"Confusion Matrix: {model_name}")
     plt.ylabel('Ware Label')
     plt.xlabel('Voorspeld Label')
-    plt.show()
+    
+    # Opslaan
+    filename = f"results/confusion_matrix_{model_name.replace(' ', '_')}.png"
+    plt.savefig(filename)
+    print(f"Figuur opgeslagen: {filename}")
+    plt.close()
     
     print(f"\n--- {model_name} Rapport ---")
     print(f"Overall Accuracy: {accuracy_score(y_test, y_pred):.4f}")
@@ -471,6 +476,9 @@ def evaluate_model_performance(clf, X, y, model_name="Classifier"):
 
 if __name__=='__main__':
     path = 'pointclouds-500' # Pas aan naar jouw lokale pad
+
+    if not os.path.exists('results'):
+        os.makedirs('results')
 
     # 1. Voorbereiding & Laden
     feature_preparation(data_path=path)
