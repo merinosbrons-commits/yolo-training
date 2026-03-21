@@ -7,11 +7,13 @@ Required libraries: numpy, scipy, scikit learn, matplotlib, tqdm
 """
 
 import math
+import seaborn as sns
 import matplotlib.pyplot as plt
 import numpy as np
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.neighbors import KDTree
 from sklearn import svm
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import GridSearchCV, train_test_split
 from sklearn.metrics import accuracy_score, confusion_matrix
 from scipy.spatial import ConvexHull
 from tqdm import tqdm
@@ -365,15 +367,22 @@ def SVM_classification(X, y):
         X: features
         y: labels
     """
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.4)
-    clf = svm.SVC()
-    clf.fit(X_train, y_train)
-    y_preds = clf.predict(X_test)
-    acc = accuracy_score(y_test, y_preds)
-    print("SVM accuracy: %5.2f" % acc)
-    print("confusion matrix")
-    conf = confusion_matrix(y_test, y_preds)
-    print(conf)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.4, random_state=42)
+    param_grid = {
+        'kernel': ['linear', 'poly', 'rbf', 'sigmoid'], 
+        'C': [0.1, 1, 10, 100],
+        'gamma': ['scale', 'auto']
+    }
+    
+    grid = GridSearchCV(svm.SVC(), param_grid, cv=5)
+    grid.fit(X_train, y_train)
+    
+    best_clf = grid.best_estimator_
+    print(f"Best SVM model: {grid.best_params_} ")
+    
+    preds = best_clf.predict(X_test)
+    print(f"SVM Accuracy (on test set): {accuracy_score(y_test, preds):.2f}")
+    return best_clf
 
 
 def RF_classification(X, y):
@@ -382,36 +391,104 @@ def RF_classification(X, y):
         X: features
         y: labels
     """
-    pass
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.4, random_state=42)
+
+    print("\n--- RF Optimalisatie (Sectie 2.2) ---")
+    param_grid = {
+        'n_estimators': [50, 100, 200],
+        'max_depth': [None, 10, 20],
+        'min_samples_split': [2, 5]
+    }
+    
+    grid = GridSearchCV(RandomForestClassifier(), param_grid, cv=5)
+    grid.fit(X_train, y_train)
+    
+    best_clf = grid.best_estimator_
+    print(f"Beste RF model: {grid.best_params_} ")
+    
+    preds = best_clf.predict(X_test)
+    print(f"RF Accuracy (on test set): {accuracy_score(y_test, preds):.2f}")
+    return best_clf
+
+def plot_learning_curve(clf, X, y, title="Learning Curve"):
+    """
+    Handmatige implementatie van de learning curve door de train-test split 
+    stapsgewijs te verhogen van 1:9 naar 9:1.
+    """
+    train_ratios = np.linspace(0.1, 0.9, 9)
+    train_scores = []
+    test_scores = []
+    
+    print(f"\nBezig met genereren van {title}...")
+    
+    for ratio in train_ratios:
+        # Handmatige split conform ratio 
+        X_train, X_test, y_train, y_test = train_test_split(
+            X, y, train_size=ratio, random_state=42
+        )
+        
+        clf.fit(X_train, y_train)
+        
+        # Gebruik Accuracy als metriek 
+        train_score = accuracy_score(y_train, clf.predict(X_train))
+        test_score = accuracy_score(y_test, clf.predict(X_test))
+        
+        train_scores.append(train_score)
+        test_scores.append(test_score)
+
+    plt.figure(figsize=(8, 5))
+    plt.plot(train_ratios, train_scores, 'o-', label="Training Accuracy")
+    plt.plot(train_ratios, test_scores, 's-', label="Validation Accuracy")
+    plt.title(title)
+    plt.xlabel("Training Set Ratio")
+    plt.ylabel("Accuracy Score")
+    plt.legend(loc="best")
+    plt.grid(True)
+    plt.show()
+
+def evaluate_model_performance(clf, X, y, model_name="Classifier"):
+    """
+    Analyseert de resultaten met een confusion matrix.
+    """
+    _, X_test, _, y_test = train_test_split(X, y, test_size=0.4, random_state=42)
+    y_pred = clf.predict(X_test)
+    
+    # Bereken de matrix
+    cm = confusion_matrix(y_test, y_pred)
+    labels = ['Building', 'Car', 'Fence', 'Pole', 'Tree'] # Conform ID's
+    
+    plt.figure(figsize=(7, 5))
+    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', 
+                xticklabels=labels, yticklabels=labels)
+    plt.title(f"Confusion Matrix: {model_name}")
+    plt.ylabel('Ware Label')
+    plt.xlabel('Voorspeld Label')
+    plt.show()
+    
+    print(f"\n--- {model_name} Rapport ---")
+    print(f"Overall Accuracy: {accuracy_score(y_test, y_pred):.4f}")
 
 
 if __name__=='__main__':
-    # specify the data folder
-    """"Here you need to specify your own path"""
-    path = 'pointclouds-500'
+    path = 'pointclouds-500' # Pas aan naar jouw lokale pad
 
-    # conduct feature preparation
-    print('Start preparing features')
+    # 1. Voorbereiding & Laden
     feature_preparation(data_path=path)
-
-    # load the data
-    print('Start loading data from the local file')
     ID, X, y = data_loading()
     feature_names = load_feature_names()
 
-    # select the most discriminative features using S_W and S_B
-    print('Select the best features')
-    ranking, selected_indices, selected_names = feature_selection_report(X, y, feature_names, n_select=5)
+    # 2. Feature Selectie: Selecteer exact 4 kenmerken 
+    ranking, selected_indices, selected_names = feature_selection_report(X, y, feature_names, n_select=4)
     X_selected = X[:, selected_indices]
 
-    # visualize features
-    print('Visualize the features')
-    feature_visualization(X=X)
+    # 3. Model Optimalisatie (SVM & RF)
+    best_svm = SVM_classification(X_selected, y)
+    best_rf = RF_classification(X_selected, y)
 
-    # SVM classification
-    print('Start SVM classification with selected features')
-    SVM_classification(X_selected, y)
+    # 4. Learning Curves genereren (Verplicht onderdeel)
+    plot_learning_curve(best_svm, X_selected, y, title="Learning Curve: SVM (Top 4 Features)")
+    plot_learning_curve(best_rf, X_selected, y, title="Learning Curve: Random Forest")
 
-    # RF classification
-    print('Start RF classification')
-    RF_classification(X, y)
+    # 5. Error Analyse & Confusion Matrices
+    evaluate_model_performance(best_svm, X_selected, y, model_name="SVM")
+    evaluate_model_performance(best_rf, X_selected, y, model_name="Random Forest")
