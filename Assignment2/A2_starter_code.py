@@ -461,8 +461,8 @@ def evaluate_model_performance(clf, X, y, model_name="Classifier"):
     sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', 
                 xticklabels=labels, yticklabels=labels)
     plt.title(f"Confusion Matrix: {model_name}")
-    plt.ylabel('Ware Label')
-    plt.xlabel('Voorspeld Label')
+    plt.ylabel('Actual Label')
+    plt.xlabel('Predicted Label')
     
     # Opslaan
     filename = f"results/confusion_matrix_{model_name.replace(' ', '_')}.png"
@@ -475,7 +475,7 @@ def evaluate_model_performance(clf, X, y, model_name="Classifier"):
 
 
 if __name__=='__main__':
-    path = 'pointclouds-500' # Pas aan naar jouw lokale pad
+    path = 'Assignment2\\pointclouds-500' # Pas aan naar jouw lokale pad
 
     if not os.path.exists('results'):
         os.makedirs('results')
