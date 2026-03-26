@@ -476,7 +476,7 @@ def evaluate_model_performance(clf, X, y, model_name="Classifier"):
 
 
 if __name__=='__main__':
-    path = 'Assignment2\\pointclouds-500' # Pas aan naar jouw lokale pad
+    path = 'pointclouds-500' # Pas aan naar jouw lokale pad
 
     if not os.path.exists('results'):
         os.makedirs('results')
