@@ -11,6 +11,7 @@ import os
 import seaborn as sns
 import matplotlib.pyplot as plt
 import numpy as np
+from sklearn.discriminant_analysis import StandardScaler
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.neighbors import KDTree
 from sklearn import svm
@@ -485,18 +486,22 @@ if __name__=='__main__':
     ID, X, y = data_loading()
     feature_names = load_feature_names()
 
-    # 2. Feature Selectie: Selecteer exact 4 kenmerken 
-    ranking, selected_indices, selected_names = feature_selection_report(X, y, feature_names, n_select=4)
-    X_selected = X[:, selected_indices]
+    # 2. Normalize
+    scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(X)
 
-    # 3. Model Optimalisatie (SVM & RF)
+    # 3. Feature Selectie: Selecteer exact 4 kenmerken 
+    ranking, selected_indices, selected_names = feature_selection_report(X_scaled, y, feature_names, n_select=4)
+    X_selected = X_scaled[:, selected_indices]
+
+    # 4. Model Optimalisatie (SVM & RF)
     best_svm = SVM_classification(X_selected, y)
     best_rf = RF_classification(X_selected, y)
 
-    # 4. Learning Curves genereren (Verplicht onderdeel)
+    # 5. Learning Curves genereren
     plot_learning_curve(best_svm, X_selected, y, title="Learning Curve: SVM (Top 4 Features)")
     plot_learning_curve(best_rf, X_selected, y, title="Learning Curve: Random Forest")
 
-    # 5. Error Analyse & Confusion Matrices
+    # 6. Error Analyse & Confusion Matrices
     evaluate_model_performance(best_svm, X_selected, y, model_name="SVM")
     evaluate_model_performance(best_rf, X_selected, y, model_name="Random Forest")
