@@ -476,32 +476,26 @@ def evaluate_model_performance(clf, X, y, model_name="Classifier"):
 
 
 if __name__=='__main__':
-    path = 'pointclouds-500' # Pas aan naar jouw lokale pad
+    path = 'pointclouds-500'
 
     if not os.path.exists('results'):
         os.makedirs('results')
 
-    # 1. Voorbereiding & Laden
     feature_preparation(data_path=path)
     ID, X, y = data_loading()
     feature_names = load_feature_names()
 
-    # 2. Normalize
     scaler = StandardScaler()
     X_scaled = scaler.fit_transform(X)
 
-    # 3. Feature Selectie: Selecteer exact 4 kenmerken 
     ranking, selected_indices, selected_names = feature_selection_report(X_scaled, y, feature_names, n_select=4)
     X_selected = X_scaled[:, selected_indices]
 
-    # 4. Model Optimalisatie (SVM & RF)
     best_svm = SVM_classification(X_selected, y)
     best_rf = RF_classification(X_selected, y)
 
-    # 5. Learning Curves genereren
     plot_learning_curve(best_svm, X_selected, y, title="Learning Curve: SVM (Top 4 Features)")
     plot_learning_curve(best_rf, X_selected, y, title="Learning Curve: Random Forest")
 
-    # 6. Error Analyse & Confusion Matrices
     evaluate_model_performance(best_svm, X_selected, y, model_name="SVM")
     evaluate_model_performance(best_rf, X_selected, y, model_name="Random Forest")
